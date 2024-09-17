@@ -3,3 +3,6 @@
 
 #models
 models
+
+#Cache
+__pycache__

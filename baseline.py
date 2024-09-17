@@ -2,9 +2,7 @@
 import tensorflow as tf
 
 def train():
-
     model = tf.keras.models.load_model('models/mnist.h5')
-    print(model.summary())
     train_data = tf.keras.datasets.mnist.load_data()[0][0]
     train_labels = tf.keras.utils.to_categorical(tf.keras.datasets.mnist.load_data()[0][1])
     model.fit(train_data, train_labels, epochs=10, validation_split=0.2, batch_size=32)
