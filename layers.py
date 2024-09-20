@@ -1,49 +1,67 @@
 import numpy as np
 #Implement our own Neural Network
-def relu_derivative(x):
-        if x > 0:
-            return 1
-        else:
-            return 0
-def sigmoid_derivative(x):
-    return x * (1 - x)
-class Dense():
+class Layer:
+    def __init__(self):
+        self.input = None
+        self.output = None
+        self.name = None
+        pass
+    def forward(self, input):
+        #return output
+        pass
+    def backward(self, output_gradient, learning_rate):
+        #return input_error
+        pass
+
+
+class Dense(Layer):
 
     def __init__(self, input_size, output_size):
+        self.weights = np.random.randn(output_size, input_size)
+        self.bias = np.random.randn(output_size,1)
+        self.name = "Dense"
 
-        self.input_size = input_size
-        self.output_size = output_size
-        self.weights = [[round(np.random.randn()*0.01,10) for _ in range(input_size)] for _ in range(output_size)]
-        self.bias = [0 for _ in range(output_size)]
-        self.delta_weights = [[0 for _ in range(input_size)] for _ in range(output_size)]
-        self.delta_bias = [0 for _ in range(output_size)]
-        self.output = [0 for _ in range(output_size)]
-        self.input = [0 for _ in range(input_size)]
-
-    def compute_output(self, input,activation=lambda x : x):
+    def forward(self, input):
         self.input = input
-        output = [0 for _ in range(self.output_size)]
-        for i in range(self.output_size):
-            for j in range(self.input_size):
-                self.output[i] += input[j] * self.weights[i][j]
-            self.output[i] += self.bias[i]
-            self.output[i] = round(self.output[i],10)
-            output[i] = activation(self.output[i])
-        return output
+        self.output = self.weights.dot(input) + self.bias
+        return self.output
+
+    def backward(self, output_gradient, learning_rate):
+        m = output_gradient.shape[1]
+        input_gradient = self.weights.T.dot(output_gradient)
+        self.weights-= learning_rate * (output_gradient.dot(self.input.T) / m)
+        self.bias -= learning_rate * (np.sum(output_gradient,axis=1,keepdims=True)/ m)
+        return input_gradient
     
-    def backpropagate(self, cost):
-        new_cost = [0 for _ in range(self.output_size)]
-        for i in range(self.output_size):
-            z = self.output[i]
-            daz = sigmoid_derivative(z)
-            dca = cost[i]
-            for j in range(self.input_size):
-                self.delta_weights[i][j] += dca * self.input[j] * daz
-                new_cost[i] += dca * daz * self.weights[i][j]
-            self.delta_bias[i] += dca * daz
-        return new_cost
-    def update(self, learning_rate):
-        for i in range(self.output_size):
-            for j in range(self.input_size):
-                self.weights[i][j] -= learning_rate * self.delta_weights[i][j]
-            self.bias[i] -= learning_rate * self.delta_bias[i]
+class Activation(Layer):
+
+    def __init__(self, activation, activation_prime):
+        self.activation = activation
+        self.activation_prime = activation_prime
+        self.name = None
+
+    def forward(self, input):
+        self.input = input
+        return np.vectorize(self.activation)(self.input)
+
+    def backward(self, output_gradient, learning_rate):
+        res = np.vectorize(self.activation_prime)(self.input)
+        return np.multiply(output_gradient, np.vectorize(self.activation_prime)(self.input))
+    
+class Relu(Activation):
+    def __init__(self):
+        relu = lambda x : np.maximum(0, x)
+        relu_prime = lambda x : x>0
+        super().__init__(relu, relu_prime)
+        self.name = "Relu"
+
+class Softmax(Layer):
+    def __init__(self):
+        self.name = "Softmax"
+    def forward(self, input):
+        e_input = np.exp(input)
+        self.output = e_input / np.sum(e_input)
+        return self.output
+    def backward(self, output_gradient, learning_rate):
+        I = np.eye(self.output.shape[0])
+        return output_gradient.dot((I - self.output.T).T)
